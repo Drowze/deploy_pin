@@ -20,7 +20,7 @@ class DeployPin::ParallelWrapper::Test < ActiveSupport::TestCase
     task = DeployPin::Task.new(task_content)
 
     File.stub :foreach, true, task_content do
-      task.parse_file
+      task.parse
 
       error = assert_raises(StandardError) do
         task.run

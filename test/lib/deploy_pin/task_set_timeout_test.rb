@@ -20,7 +20,7 @@ class DeployPin::Database::Test < ActiveSupport::TestCase
     task = DeployPin::Task.new(task_content)
 
     File.stub :foreach, true, task_content do
-      task.parse_file
+      task.parse
 
       assert_raises(timeout_exception_klass) do
         task.run
@@ -33,7 +33,7 @@ class DeployPin::Database::Test < ActiveSupport::TestCase
     task = DeployPin::Task.new(task_content)
 
     File.stub :foreach, true, task_content do
-      task.parse_file
+      task.parse
       task.run
     end
   end
@@ -43,7 +43,7 @@ class DeployPin::Database::Test < ActiveSupport::TestCase
     task = DeployPin::Task.new(task_content)
 
     File.stub :foreach, true, task_content do
-      task.parse_file
+      task.parse
       task.run
     end
   end
@@ -53,7 +53,7 @@ class DeployPin::Database::Test < ActiveSupport::TestCase
     task = DeployPin::Task.new(task_content)
 
     File.stub :foreach, true, task_content do
-      task.parse_file
+      task.parse
 
       assert_raises(timeout_exception_klass) do
         task.run

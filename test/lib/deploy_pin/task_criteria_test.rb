@@ -27,10 +27,10 @@ class DeployPin::TaskCriteria::Test < ActiveSupport::TestCase
     @task_1 = DeployPin::Task.new("#{DeployPin.tasks_path}1_task.rb")
     @task_2 = DeployPin::Task.new("#{DeployPin.tasks_path}2_task.rb")
     @task_3 = DeployPin::Task.new("#{DeployPin.tasks_path}3_task.rb")
-    @task_1.parse_file
-    @task_2.parse_file
-    @task_3.parse_file
-    @criteria = DeployPin::TaskCriteria.new(identifiers: ['I', 'II', '75371573753754!', '-75371573753752'])
+    @task_1.parse
+    @task_2.parse
+    @task_3.parse
+    @criteria = DeployPin::TaskCriteria.new(identifiers: ['I', 'II', '75371573753754!', '!75371573753752'])
   end
 
   teardown do

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'deploy_pin/deployment_state'
 require 'deploy_pin/runner'
 require 'deploy_pin/collector'
 require 'deploy_pin/parallel_wrapper'
@@ -19,6 +20,7 @@ module DeployPin
     statement_timeout
     run_formatter
     list_formatter
+    deployment_state_transition
   ].freeze
 
   OPTIONS.each do |option|
@@ -33,5 +35,9 @@ module DeployPin
 
   def self.setup(&block)
     instance_eval(&block)
+  end
+
+  def self.enabled?(option)
+    class_variable_defined?("@@#{option}")
   end
 end

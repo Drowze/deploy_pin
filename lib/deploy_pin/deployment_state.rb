@@ -1,0 +1,92 @@
+# frozen_string_literal: true
+
+module DeployPin
+  # The mixin that extends DeployPin module with
+  # @ongoing_deployment? & @pending_deployment? methods
+  module DeploymentState
+    ONGOING = 'ongoing'
+    PENDING = 'pending'
+    CACHE_KEY = 'deploy_pin:deployment'
+
+    DEPLOYMENT_OVER_TASK = %(
+      # no_file_task
+      # -1:%<group>s:recurring
+      # task_title: Cleanup DeployPin.state
+
+      DeployPin.send(:deployment_over!)
+      ).strip
+
+    DEPLOYMENT_ONGOING_TASK = %(
+      # no_file_task
+      # 0:%<group>s:recurring
+      # task_title: Set DeployPin.state to 'ongoing'
+
+      DeployPin.send(:deployment_ongoing!)
+      ).strip
+
+    DEPLOYMENT_PENDING_TASK = %(
+      # no_file_task
+      # 0:%<group>s:recurring
+      # task_title: Set DeployPin.state to 'pending'
+
+      DeployPin.send(:deployment_pending!)
+      ).strip
+
+    def ongoing_deployment?
+      deployment_state == ONGOING
+    end
+
+    def pending_deployment?
+      deployment_state == PENDING
+    end
+
+    def deployment_tasks_code
+      return [] unless DeployPin.enabled?(:deployment_state_transition)
+
+      ongoing_start_group, ongoing_end_group = DeployPin.deployment_state_transition[:ongoing]
+      rollback_group = DeployPin.deployment_state_transition[:pending]
+
+      [
+        format(DEPLOYMENT_ONGOING_TASK, group: ongoing_start_group),
+        format(DEPLOYMENT_OVER_TASK, group: ongoing_end_group),
+        format(DEPLOYMENT_PENDING_TASK, group: rollback_group)
+      ]
+    end
+
+    protected
+
+      def deployment_over!
+        in_memory_store.delete(:deployment)
+        Rails.cache.delete(CACHE_KEY)
+      end
+
+      def deployment_ongoing!
+        Rails.cache.write(CACHE_KEY, ONGOING)
+      end
+
+      def deployment_pending!
+        Rails.cache.write(CACHE_KEY, PENDING)
+      end
+
+    private
+
+      def in_memory_store
+        Thread.current[:deploy_pin] ||= {}
+      end
+
+      def deployment_state
+        state = in_memory_store[:deployment] || {}
+
+        if state.blank? || state[:expiration] < Time.current
+          in_memory_store[:deployment] = {
+            expiration: DeployPin.deployment_state_transition[:ttl].from_now,
+            state: Rails.cache.read(CACHE_KEY)
+          }
+        end
+
+        in_memory_store[:deployment][:state]
+      end
+  end
+
+  extend DeploymentState
+end

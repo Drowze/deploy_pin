@@ -11,6 +11,7 @@ module DeployPin
                 :group,
                 :title,
                 :script,
+                :recurring,
                 :explicit_timeout
 
     def initialize(file)
@@ -29,11 +30,15 @@ module DeployPin
     end
 
     def mark
+      return if recurring
+
       # store record in the DB
       DeployPin::Record.create(uuid: uuid)
     end
 
     def done?
+      return if recurring
+
       DeployPin::Record.where(uuid: uuid).exists?
     end
 
@@ -41,12 +46,13 @@ module DeployPin
       !explicit_timeout? && !parallel?
     end
 
-    def parse_file
-      File.foreach(file) do |line|
+    def parse
+      each_line do |line|
         case line.strip
-        when /\A# (\d+):(\w+)/
-          @uuid = Regexp.last_match(1)
+        when /\A# (-?\d+):(\w+):?(recurring)?/
+          @uuid = Regexp.last_match(1).to_i
           @group = Regexp.last_match(2)
+          @recurring = Regexp.last_match(3)
         when /\A# task_title:(.+)/
           @title = Regexp.last_match(1).strip
         when /\A[^#].*/
@@ -55,6 +61,14 @@ module DeployPin
           @explicit_timeout = true if line =~ /Database.execute_with_timeout.*/
           @parallel = true if line =~ /[Pp]arallel.*/
         end
+      end
+    end
+
+    def each_line(&block)
+      if file.starts_with?('# no_file_task')
+        file.each_line(&block)
+      else
+        File.foreach(file, &block)
       end
     end
 
@@ -75,7 +89,7 @@ module DeployPin
 
       # for sorting
       def <=>(other)
-        group_index <=> other.group_index
+        [group_index, uuid] <=> [other.group_index, uuid]
       end
 
       def group_index
